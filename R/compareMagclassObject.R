@@ -1,14 +1,14 @@
-compareMagclassObject <- function(x, y, tol = 0.5) {
-
+compareMagclassObject <- function(x, y, tol = 0.3) {
   # compare dimensions names ----
 
   if (!identical(dim(x), dim(y))) {
     message("# Dimension names are not identical")
     message(paste0("## Dimension ",
-                   which(dim(x) != dim(y)), ": ",
-                   dim(x)[dim(x) != dim(y)], " != ",
-                   dim(y)[dim(x) != dim(y)],
-                   collapse = ", "))
+      which(dim(x) != dim(y)), ": ",
+      dim(x)[dim(x) != dim(y)], " != ",
+      dim(y)[dim(x) != dim(y)],
+      collapse = ", "
+    ))
   } else {
     message("# Dimensions are identical (/)")
   }
@@ -65,31 +65,55 @@ compareMagclassObject <- function(x, y, tol = 0.5) {
   naY <- y[, , naY]
 
   if (length(setdiff(getNames(naX), getNames(naY))) > 0) {
-    message(paste0("## Items with NA values only in x: ",
-                   paste0(setdiff(getNames(naX), getNames(naY)), collapse = ", ")))
+    message(paste0(
+      "## Items with NA values only in x: ",
+      paste0(setdiff(getNames(naX), getNames(naY)), collapse = ", ")
+    ))
   }
 
   if (length(setdiff(getNames(naY), getNames(naX))) > 0) {
-    message(paste0("## Items with NA values only in y: ",
-                   paste0(setdiff(getNames(naY), getNames(naX)), collapse = ", ")))
+    message(paste0(
+      "## Items with NA values only in y: ",
+      paste0(setdiff(getNames(naY), getNames(naX)), collapse = ", ")
+    ))
   }
 
   # compare non-NA values ----
-  maxDiff <- max(abs(x - y), na.rm = TRUE)
-
-  # TODO: improve this section
+  diff <- abs(x - y)
+  maxDiff <- max(diff, na.rm = TRUE)
 
   if (maxDiff != 0) {
     message(paste0("# Maximum value difference in common values: ", round(maxDiff, digits = 2)))
+    minDiff <- min(diff, na.rm = TRUE)
+    diffScaled <- (diff - minDiff) / (maxDiff - minDiff)
+    gaps <- magclass::where(diffScaled > tol)
 
-    diff <- (x - y) /  (x + y) / 2
-    diff[is.na(diff)] <- 0
-    diff <- abs(diff)
+    df <- gaps$true$individual %>%
+      as.data.frame() %>%
+      mutate("x" = NA, "y" = NA)
 
+    for (i in seq(1, nrow(df))) {
 
-    gaps <- magclass::where(diff > tol)
-    message("# Dimensions with differences% :")
-    print(gaps$true$individual)
+      # a hack for getYears(x) == NULL
+
+      if (df[i, 2] == "dummy") {
+        df[i, "x"] <- x[df[i, 1], , df[i, 3]]
+        df[i, "y"] <- y[df[i, 1], , df[i, 3]]
+      } else {
+        df[i, "x"] <- x[df[i, 1], df[i, 2], df[i, 3]]
+        df[i, "y"] <- y[df[i, 1], df[i, 2], df[i, 3]]
+      }
+    }
+
+    df <- df %>%
+      mutate(
+        diff = abs(.data$x - .data$y),
+        facor = .data$y / .data$x
+      ) %>%
+      arrange(desc(diff))
+
+    message("# Largest differences :")
+    print(df)
   } else {
     message(paste0("# Values are identical (/)"))
   }
