@@ -88,6 +88,8 @@ compareMagclassObject <- function(x, y, tol = 0.3) {
     diffScaled <- (diff - minDiff) / (maxDiff - minDiff)
     gaps <- magclass::where(diffScaled > tol)
 
+    message(paste0("## Variables with differences: ", paste0(gaps$true$data, collapse = "\n ")))
+
     df <- gaps$true$individual %>%
       as.data.frame() %>%
       mutate("x" = NA, "y" = NA)
