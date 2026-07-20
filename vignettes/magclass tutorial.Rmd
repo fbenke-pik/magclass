@@ -1,0 +1,247 @@
+---
+title: "magclass for REMINDers"
+output: 
+  html_document:
+    theme: paper
+    toc: true
+    toc_float:
+      collapsed: false
+    toc_depth: 3
+date: "2026-07-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  dev = "svg", # svg, png,...
+  fig.ext = ".svg",
+  # fig.asp = .8 # default aspect ratio
+  fig.width = 16,
+  fig.height = 9,
+  dpi = 100
+)
+```
+
+```{r message=FALSE}
+# load the library
+library(magclass)
+
+# loading other helpers used in this tutorial
+library(tidyr)
+library(dplyr)
+
+# load sample data
+pm <- maxample("pop")
+a <- maxample("animal")
+```
+
+# Part 1: Basics
+
+## declaring a magpie object
+
+```{r}
+# creating a magpie object with 2 regions, 2 years and 2 different values
+m1 <- new.magpie(
+  cells_and_regions = c("USA", "BRA"),
+  years = c(1995, 2000),
+  names = c("iron", "steel"),
+  sets = c("region", "year", "value"),
+  fill = 0
+)
+
+# take a look at the data
+print(m1)
+
+# creating a magpie object with more than one subdimension
+m2 <- new.magpie(
+  cells_and_regions = c("USA", "BRA"),
+  years = seq(1995, 2020, 5),
+  names = c("IEA.iron", "IEA.steel", "WoldSteelDatabase.steel"),
+  sets = c("region", "year", "value"),
+  fill = NA
+)
+
+# take a look at the data
+print(m2)
+```
+
+## exploring a magpie object
+
+```{r}
+# Show the structure of the object
+str(pm)
+
+# Show the first elements
+head(pm)
+
+# Show the last elements
+tail(pm)
+
+# Which elements are there?
+getItems(pm)
+
+# Which spatial elements are there?
+getItems(pm, dim = 1)
+
+# Select dimension via its dimension code.
+getItems(pm, dim = 3)
+
+# Select dimension via its dimension name.
+getItems(pm, dim = "scenario")
+
+# What are the sets (dimensions names) of the data?
+getSets(pm)
+
+# What are the years of the data?
+getYears(pm)
+
+# Print the years as integers
+getYears(pm, as.integer = TRUE)
+
+# Create a simple plot
+mplot(pm)
+
+# Investigate a higher dimensional magpie object
+getItems(a)
+
+# get all types
+getNames(a, dim = 2)
+
+# get all the species
+getNames(a, dim = 3)
+
+# the same can be achieved by
+getItems(a, dim = 3.3)
+
+# a magpie object can have several subdimensions in all dimensions, not only the third
+getItems(a, dim = 1)
+getItems(a, dim = 2)
+```
+
+## filtering a magpie object
+
+```{r}
+# Return all A2 related data for LAM and the years 2005 and 2015
+pm["LAM", c(2005, 2015), "A2"]
+
+# Return data for regions which have “AS” in its name (pmatch allows for partial matching of the given search string)
+pm["AS", , , pmatch = TRUE]
+
+# Get all regions except for LAM
+pm["LAM", , , invert = TRUE]
+
+# If you want to specifically select from one dimension from which you have the dimension name:
+mselect(pm, scenario = "B1", i = c("FSU", "LAM"))
+
+# Or you can use alternatively:
+pm[list(i = c("FSU", "LAM")), , list(scenario = "B1")]
+
+# Filtering for higher dimensionality objects
+a[
+  list(x = "5p75", country = c("NLD", "BEL")),
+  list(year = "y2000"),
+  list(species = "bird", color = "black")
+]
+```
+
+## manipulating a magpie object's structure
+
+```{r}
+pm1 <- pm
+
+# overwrite the first region "AFR" with "GHA"
+getItems(pm1, dim = 1)[1] <- "GHA"
+print(pm1)
+
+# rename the temporal dimension from "t" to "year"
+getSets(pm1)[2] <- "year"
+print(pm1)
+
+# drop all the names in the data dimension that are the same for each element
+# in this case, the "type" dimension is dropped, as it is always "animal"
+a1 <- collapseDim(a)
+getNames(a1)
+
+# in a2, collapseDim would drop both the "type" and "species" dimension,
+# because "type" is always "animal" and "species" always "rabbit"
+a2 <- a[, , "rabbit"]
+
+# this call makes sure that the "type" dimension is not dropped although
+# it only contains the value "animal"
+a2 <- collapseDim(a2, keepdim = "type")
+getNames(a2)
+
+# add a new dimension to existing data
+pm1 <- add_dimension(pm, dim = 3.1, add = "model", nm = "WEO")
+getNames(pm1)
+
+# add a new entry to an existing dimension
+pm1 <- add_columns(pm1, addnm = "C3", dim = 3.2, fill = NA)
+getNames(pm1)
+
+# let "C3" values be the difference between A2 and B1
+pm1[, , "C3"] <- pm1[, , "A2"] - pm1[, , "B1"]
+head(pm1[, , "C3"])
+
+# you can apply mathematic operations on each item of the magclass objects
+m3 <- pm["AFR", c(2015, 2025), "B1"]
+print(m3)
+
+# for example:
+
+# multiply each item with a factor
+m3 * 2.5
+
+# squared of each item  
+m3 ^ 2 
+
+
+
+```
+
+## creating from a data frame
+
+```{r}
+df <- data.frame(
+  region = c("USA", "BRA", "FRA"),
+  years = c(2000, 2005, 2010),
+  product = c("iron", "steel", "cement")
+) %>%
+  complete(region, years, product) %>%
+  mutate("value" = sample.int(n = 1000, size = 27))
+
+print(head(df))
+
+# magpie will try guessing the right attribution. To be safe,
+# make the spatial, temporal and data column explicit. All other
+# columns will form the third dimension with its subdimensions.
+m <- as.magpie(df, spatial = 1, temporal = 2, datacol = 4)
+print(m)
+```
+
+- dimsums
+
+## Advanced
+
+- toolAggregate
+  aggregate regions, simple renamings of dimension names, ...
+- toolIso2Country
+- toolISOhistorical
+- subleties
+- comparing magclass objects
+- reading and writing magclass objects
+
+
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
