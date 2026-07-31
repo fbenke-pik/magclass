@@ -10,6 +10,9 @@ output:
 date: "2026-07-20"
 ---
 
+
+  
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   dev = "svg", # svg, png,...
@@ -29,9 +32,9 @@ library(magclass)
 library(tidyr)
 library(dplyr)
 
-# load sample data
-pm <- maxample("pop")
-a <- maxample("animal")
+# load sample data used 
+pop <- maxample("pop")
+animal <- maxample("animal")
 ```
 
 # Part 1: Basics
@@ -44,7 +47,7 @@ m1 <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
   years = c(1995, 2000),
   names = c("iron", "steel"),
-  sets = c("region", "year", "value"),
+  sets = c("region", "year", "variable"),
   fill = 0
 )
 
@@ -56,151 +59,21 @@ m2 <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
   years = seq(1995, 2020, 5),
   names = c("IEA.iron", "IEA.steel", "WoldSteelDatabase.steel"),
-  sets = c("region", "year", "value"),
+  sets = c("region", "year", "model.product"),
   fill = NA
 )
 
 # take a look at the data
 print(m2)
-```
+getSets(m2)
 
-## exploring a magpie object
-
-```{r}
-# Show the structure of the object
-str(pm)
-
-# Show the first elements
-head(pm)
-
-# Show the last elements
-tail(pm)
-
-# Which elements are there?
-getItems(pm)
-
-# Which spatial elements are there?
-getItems(pm, dim = 1)
-
-# Select dimension via its dimension code.
-getItems(pm, dim = 3)
-
-# Select dimension via its dimension name.
-getItems(pm, dim = "scenario")
-
-# What are the sets (dimensions names) of the data?
-getSets(pm)
-
-# What are the years of the data?
-getYears(pm)
-
-# Print the years as integers
-getYears(pm, as.integer = TRUE)
-
-# Create a simple plot
-mplot(pm)
-
-# Investigate a higher dimensional magpie object
-getItems(a)
-
-# get all types
-getNames(a, dim = 2)
-
-# get all the species
-getNames(a, dim = 3)
-
-# the same can be achieved by
-getItems(a, dim = 3.3)
-
-# a magpie object can have several subdimensions in all dimensions, not only the third
-getItems(a, dim = 1)
-getItems(a, dim = 2)
-```
-
-## filtering a magpie object
-
-```{r}
-# Return all A2 related data for LAM and the years 2005 and 2015
-pm["LAM", c(2005, 2015), "A2"]
-
-# Return data for regions which have “AS” in its name (pmatch allows for partial matching of the given search string)
-pm["AS", , , pmatch = TRUE]
-
-# Get all regions except for LAM
-pm["LAM", , , invert = TRUE]
-
-# If you want to specifically select from one dimension from which you have the dimension name:
-mselect(pm, scenario = "B1", i = c("FSU", "LAM"))
-
-# Or you can use alternatively:
-pm[list(i = c("FSU", "LAM")), , list(scenario = "B1")]
-
-# Filtering for higher dimensionality objects
-a[
-  list(x = "5p75", country = c("NLD", "BEL")),
-  list(year = "y2000"),
-  list(species = "bird", color = "black")
-]
-```
-
-## manipulating a magpie object's structure
-
-```{r}
-pm1 <- pm
-
-# overwrite the first region "AFR" with "GHA"
-getItems(pm1, dim = 1)[1] <- "GHA"
-print(pm1)
-
-# rename the temporal dimension from "t" to "year"
-getSets(pm1)[2] <- "year"
-print(pm1)
-
-# drop all the names in the data dimension that are the same for each element
-# in this case, the "type" dimension is dropped, as it is always "animal"
-a1 <- collapseDim(a)
-getNames(a1)
-
-# in a2, collapseDim would drop both the "type" and "species" dimension,
-# because "type" is always "animal" and "species" always "rabbit"
-a2 <- a[, , "rabbit"]
-
-# this call makes sure that the "type" dimension is not dropped although
-# it only contains the value "animal"
-a2 <- collapseDim(a2, keepdim = "type")
-getNames(a2)
-
-# add a new dimension to existing data
-pm1 <- add_dimension(pm, dim = 3.1, add = "model", nm = "WEO")
-getNames(pm1)
-
-# add a new entry to an existing dimension
-pm1 <- add_columns(pm1, addnm = "C3", dim = 3.2, fill = NA)
-getNames(pm1)
-
-# let "C3" values be the difference between A2 and B1
-pm1[, , "C3"] <- pm1[, , "A2"] - pm1[, , "B1"]
-head(pm1[, , "C3"])
-
-# you can apply mathematic operations on each item of the magclass objects
-m3 <- pm["AFR", c(2015, 2025), "B1"]
-print(m3)
-
-# for example:
-
-# multiply each item with a factor
-m3 * 2.5
-
-# squared of each item  
-m3 ^ 2 
-
-
-
+# note that the first and second dimension can also be multidimensional, e.g. for coordinates in dimension one and subannual data in dimension two, but this is not a frequent use case in the REMIND world
 ```
 
 ## creating from a data frame
 
 ```{r}
+
 df <- data.frame(
   region = c("USA", "BRA", "FRA"),
   years = c(2000, 2005, 2010),
@@ -218,17 +91,265 @@ m <- as.magpie(df, spatial = 1, temporal = 2, datacol = 4)
 print(m)
 ```
 
-- dimsums
+## reading in a magpie object from different file formats
 
-## Advanced
+```{r eval=FALSE}
 
+# read from gdx
+
+# if you want to try this yourself, download a release from  https://rse.pik-potsdam.de/data/example/remind2_test-convGDX2MIF_SSP2-EU21-PkBudg650-release.gdx and edit gdxPath to reference the downloaded file
+gdxPath <- "./remind2_test-convGDX2MIF_SSP2-EU21-PkBudg650-release.gdx"
+
+# often, setting restoreZeros to FALSE is advisable, to limit the size of the magpie object
+m <- gdx2::readGDX(gdxPath, c("vm_prodFe"), field = "l", restoreZeros = FALSE, format = "first_found")
+
+# read from cs4r
+cs4rPath <- "./f_fedemandInd.cs4r"
+x <- read.magpie(cs4rPath)
+
+```
+
+## writing a magpie object to a file
+```{r eval=FALSE}
+
+# write to the cs4r format
+magclass::write.magpie(x = pop, file_name = "population_example.cs4r")
+
+# write to mif file
+# mif format has columns "Model", Scenario", "Region", "Variable", "Unit", so let's 
+# add all missing information to the magclass object before writing to mif format
+
+popOut <- addDim(pop, dim = 3.2, dimName = "variable", item = "Population (million)")
+magclass::write.report(x = popOut, file = "population_example.mif", scenario = "historical", model = "WDI")
+```
+
+## exploring a magpie object
+
+```{r}
+# Show the structure of the object
+str(pop)
+
+# Show the first elements
+head(pop)
+
+# Show the last elements
+tail(pop)
+
+# Which elements are there?
+getItems(pop)
+
+# Which spatial elements are there?
+getItems(pop, dim = 1)
+
+# Select dimension via its dimension code.
+getItems(pop, dim = 3)
+
+# Select dimension via its dimension name.
+getItems(pop, dim = "scenario")
+
+# What are the sets (dimensions names) of the data?
+getSets(pop)
+
+# What are the years of the data?
+getYears(pop)
+
+# Print the years as integers
+getYears(pop, as.integer = TRUE)
+
+# Create a simple plot
+mplot(pop)
+
+# Investigate a higher dimensional magpie object
+getItems(animal)
+getItems(animal, split = TRUE)
+
+# get all types
+getNames(animal, dim = 2)
+
+# get all the species
+getNames(animal, dim = 3)
+
+# the same can be achieved by
+getItems(animal, dim = 3.3)
+
+# a magpie object can have several subdimensions in all dimensions, not only the third
+getItems(animal, dim = 1)
+getItems(animal, dim = 2)
+```
+
+## filtering a magpie object
+
+```{r}
+# Return all A2 related data for LAM and the years 2005 and 2015
+pop["LAM", c(2005, 2015), "A2"]
+
+# Return data for regions which have “AS” in its name (pmatch allows for partial matching of the given search string)
+pop["AS", , , pmatch = TRUE]
+
+# Get all regions except for LAM
+pop["LAM", , , invert = TRUE]
+
+# If you want to specifically select from one dimension from which you have the dimension name:
+mselect(pop, scenario = "B1", i = c("FSU", "LAM"))
+
+# Or you can use alternatively:
+pop[list(i = c("FSU", "LAM")), , list(scenario = "B1")]
+
+# Filtering for higher dimensionality objects
+animal[
+  list(x = "5p75", country = c("NLD", "BEL")),
+  list(year = "y2000"),
+  list(species = "bird", color = "black")
+]
+
+# exercises
+animal["LUX", , "bird"]
+animal[, , "bird.red"]
+# chain subsetting
+animal[, , "bird"][, , "red"]
+```
+
+## manipulating a magpie object's structure
+
+```{r}
+pop1 <- pop
+
+# select A2 scenario data and assign 0
+pop1[, , "A2"] <- 0
+
+# TODO: add more advanced selection and assigning a matching matrix
+
+# overwrite the first region "AFR" with "GHA"
+getItems(pop1, dim = 1)[1] <- "GHA"
+print(pop1)
+
+# rename the temporal dimension from "t" to "year" and spatial dimension from "i" to "region"
+getSets(pop1)[[2]] <- "year"
+getSets(pop1)[[1]] <- "region"
+getSets(pop1)
+
+# drop all the names in the data dimension that are the same for each element
+# in this case, the "type" dimension is dropped, as it is always "animal"
+a1 <- collapseDim(animal)
+getNames(a1)
+
+# in a2, collapseDim would drop both the "type" and "species" dimension,
+# because "type" is always "animal" and "species" always "rabbit"
+a2 <- animal[, , "rabbit"]
+
+# this call makes sure that the "type" dimension is not dropped although
+# it only contains the value "animal"
+a2 <- collapseDim(a2, keepdim = "type")
+getNames(a2)
+
+# add a new dimension to existing data
+pop1 <- addDim(pop, dim = 3.1, dimName = "model", item = "WEO")
+getNames(pop1)
+
+# add a new entry to an existing dimension
+pop1 <- add_columns(pop1, addnm = "C3", dim = 3.2, fill = NA)
+getNames(pop1)
+
+# let "C3" values be the difference between A2 and B1
+pop1[, , "C3"] <- pop1[, , "A2"] - pop1[, , "B1"]
+head(pop1[, , "C3"])
+
+# you can apply mathematic operations on each item of the magclass objects
+m3 <- pop["AFR", c(2015, 2025), "B1"]
+print(m3)
+
+# for example:
+
+# multiply each item with a factor (scalar)
+m3 * 2.5
+
+# this could be used to convert the world population data from millions to billions
+pop1 <- pop1 / 1000
+
+# squared of each item
+m3^2
+
+# set all values greater than 1000 to 1000
+pop1[pop1 > 1000] <- 1000
+
+# if you do calculations with two magpie objects with exact same dimensions, the data
+# will be applied element-wise
+
+# simple case: all dimension values in "factor" either perfectly match pop1 (year), or
+# they have exactly one value (region, scenario)
+factor <- new.magpie(years = getItems(pop1, 2), fill = seq(1, 1.2, length.out = 16))
+
+# if you do this calculation, the factors will be multiplied with the matching years
+# the same factors are applied for each region and scenario
+pop1 * factor
+
+# behind the scenes, factor is expanded to match pop1
+magpie_expand(factor, pop1)
+
+# what happens if the "factor" object does not have matching years?
+# magpie assumes the years are of different sets and creates the cross product
+# therefore, the object is blown up in size
+str(pop1 * factor[, c(1995, 2005), ])
+
+# add subdimension and bind them
+acceleratedPop <- pop * factor
+acceleratedPop <- addDim(acceleratedPop, dim = 3.1, dimName = "mode", item = "accelerated")
+normalPop <- addDim(pop, dim = 3.1, dimName = "mode", item = "normal")
+allPop <- mbind(normalPop, acceleratedPop)
+str(allPop)
+
+
+# summing over dimensions
+
+# get the global population
+dimSums(pop, dim = 1)
+
+# TODO add example where we sum over the data dimension
+
+# TODO add example where we sum over the temporal dimension
+
+# TODO sum over mutiple dimensions at once
+
+# TODO add example where na.rm = TRUE is needed
+
+# TODO time interpolations
+#time_interpolate(d[, , 1], 2005:2030)
+
+```
+
+
+## Exercises from the Workshop / Tutorial
+
+TODO: add more difficult ones from the magclass tutorial
+
+```{r}
+# calculate the share of the global population for each region per year
+
+pop / dimSums(pop, dim = 1)
+
+# compute how many rabbits there are reported LUX in may each year
+
+collapseDim(dimSums(animal["LUX", "may", "rabbit"], dim = c(3.1, 3.3)))
+```
+
+
+# Advanced
+
+## Common problems when converting to magclass
+- matchdim
+- time interpolation
+- mbind and its subtleties
 - toolAggregate
   aggregate regions, simple renamings of dimension names, ...
 - toolIso2Country
 - toolISOhistorical
-- subleties
+- subleties / problems
+  - wrong assignment of region for three letter columns (e.g. model = UBA)
+  - data frames with odd sorting fail to be converted into right magclass structure
+  - filtering for items that appear in more than one subdimension might lead to unexpected results
 - comparing magclass objects
-- reading and writing magclass objects
+```{r}
+
 
 
 
@@ -236,12 +357,17 @@ print(m)
 ```{r}
 ```
 
-
 ```{r}
 ```
 
 ```{r}
 ```
 
-```{r}
-```
+
+# Sources
+- [magclass concept: Explaining the general concept behing magclass objects in comparison to arrays and data frames](https://pik-piam.r-universe.dev/magclass/doc/magclass-concept.html)
+- [magclass main tutorial: Central tutorial explaining the basics how to use magclass](https://pik-piam.r-universe.dev/magclass/doc/magclass.html)
+- [magclass 6: Tutorial about some important changes which came with the complete rewrite of the package in version 6.](https://pik-piam.r-universe.dev/magclass/doc/magclass6.html)
+- [magclass object expansion: more specific tutorial going into the details of object expansion and set matching.](https://pik-piam.r-universe.dev/magclass/doc/magclass-expansion.html)
+- [The magclass tutorial](https://magpiemodel.github.io/tutorials/t13-magclass)
+- [magclass session as part of the REMIND-MAgPIE workshop, use code Ya&1Yi*v](https://pik-potsdam.zoom-x.de/rec/share/HXDw1zHT0Vi-uQroAd7GTr1CBbpgng0C8uESaDCcnhfU2RCZHb_do4_qGnBlvXfs.ubV6oTJ__6CioLkt)
