@@ -238,6 +238,13 @@ a2 <- animal[, , "rabbit"]
 a2 <- collapseDim(a2, keepdim = "type")
 getNames(a2)
 
+# another way of dropping the type dimension is this
+a3 <- animal
+getItems(a3, dim = "type") <- NULL
+
+# but careful, dropping a dimension with more than one value this way will introduce duplicated
+getItems(a3, dim = "color") <- NULL
+
 # add a new dimension to existing data
 pop1 <- addDim(pop, dim = 3.1, dimName = "model", item = "WDI")
 getNames(pop1)
@@ -269,6 +276,29 @@ pop1 <- pop1 / 1000
 pop1[pop1 > 1] <- 1
 max(pop1)
 ```
+
+
+## Exercises from the Workshop / Tutorial
+
+```{r}
+# calculate the share of the global population for each region per year
+pop / dimSums(pop, dim = 1)
+
+# take the "animal" example data set from the magclass package and compute how many rabbits there are reported in Luxembourg (LUX) in may of each available year.
+collapseDim(dimSums(animal["LUX", "may", "rabbit"], dim = c(3.1, 3.3)))
+
+a1 <- animal
+
+# set all values for red birds in the animal data set to 0 and all values greater than 10 to 10.
+a1[,,"bird"][,,"red"] <- 0
+a1[a1 > 10] <- 10
+
+# rename all dogs in the animal data set to cats and remove the "type" subdimension.
+getNames(a1, dim = 2)[3] <- "cat"
+a1 <- collapseDim(a1)
+
+```
+
 
 # Part 2: Advanced operations
 
@@ -417,19 +447,6 @@ dimSums(pop, dim = 1)
 ```
 
 
-## Exercises from the Workshop / Tutorial
-
-TODO: add more difficult ones from the magclass tutorial
-
-```{r}
-# calculate the share of the global population for each region per year
-
-pop / dimSums(pop, dim = 1)
-
-# compute how many rabbits there are reported LUX in may each year
-
-collapseDim(dimSums(animal["LUX", "may", "rabbit"], dim = c(3.1, 3.3)))
-```
 
 
 # Advanced
