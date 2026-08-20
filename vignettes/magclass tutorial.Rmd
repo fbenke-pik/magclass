@@ -87,7 +87,7 @@ m <- as.magpie(df, spatial = 1, temporal = 2, datacol = 4)
 print(m)
 ```
 
-## reading in a magpie object from different file formats
+## reading in from different file formats
 
 ```{r eval=FALSE}
 # read from gdx
@@ -277,8 +277,7 @@ pop1[pop1 > 1] <- 1
 max(pop1)
 ```
 
-
-## Exercises from the Workshop / Tutorial
+## exercises from the workshop / tutorial
 
 ```{r}
 # calculate the share of the global population for each region per year
@@ -299,8 +298,47 @@ a1 <- collapseDim(a1)
 
 ```
 
-
 # Part 2: Advanced operations
+
+## summing over dimensions
+
+```{r}
+
+# get the global population
+dimSums(pop, dim = 1)
+
+
+# a sample with made-up emissions in various industry sectors
+m <- new.magpie(
+  cells_and_regions = c("USA", "BRA"),
+  years = c(1995, 2000, 2005),
+  names = c("steel", "cement", "chemicals"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(16)
+)
+
+# get emissions over all sectors
+dimSums(m, dim = 3)
+
+# get emissions over all sectors and all years
+dimSums(m, dim = c(2,3))
+
+# you can also sum over subdimensions
+animals <- maxample("animal")
+# sum over colors in animals object
+head(dimSums(animals, dim = 3.3))
+
+# be careful when a magpie object contains NAs
+m["USA",2000,"cement"] <- NA 
+# summing over sectors yields NA for USA in 2000, because cement has no value
+# for that year
+dimSums(m, dim = 3)
+
+# this behaviour makes sense, as we cannot assume that data gaps can be interpreted
+# as 0 values. if you still want to, you can set na.rm = TRUE
+dimSums(m, dim = 3, na.rm = TRUE)
+
+```
 
 ## multiplication of two magpie objects
 ```{r}
@@ -424,37 +462,16 @@ m3
 
 ```
 
-############ Continue here
-
-
+## interpolation
 
 ```{r}
-# summing over dimensions
-
-# get the global population
-dimSums(pop, dim = 1)
-
-# TODO add example where we sum over the data dimension
-
-# TODO add example where we sum over the temporal dimension
-
-# TODO sum over multiple dimensions at once
-
-# TODO add example where na.rm = TRUE is needed
-
 # TODO time interpolations
 # time_interpolate(d[, , 1], 2005:2030)
 ```
 
 
-
-
-# Advanced
-
 ## Common problems when converting to magclass
 - matchdim
-- time interpolation
-- mbind and its subtleties
 - toolAggregate
   aggregate regions, simple renamings of dimension names, ...
 - toolIso2Country
