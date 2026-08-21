@@ -279,7 +279,7 @@ max(pop1)
 
 ## exercises from the workshop / tutorial
 
-```{r}
+```{r eval=FALSE}
 # calculate the share of the global population for each region per year
 pop / dimSums(pop, dim = 1)
 
@@ -335,6 +335,30 @@ dimSums(m, dim = 3)
 # this behaviour makes sense, as we cannot assume that data gaps can be interpreted
 # as 0 values. if you still want to, you can set na.rm = TRUE
 dimSums(m, dim = 3, na.rm = TRUE)
+```
+
+## looping with 'magpply'
+
+```{r}
+m <- new.magpie(
+  cells_and_regions = c("USA", "BRA"),
+  years = c(1995, 2000, 2005),
+  names = c("cement"),
+  sets = c("region", "year", "emissions"),
+  fill = c(72, NA, NA, NA)
+)
+
+print(m)
+
+# efficient looping over magpie can be done using 'magpply'
+# this call loops over the spatial dimension and identifies rows with all NAs
+magpply(m, function(y) all(is.na(y)), MARGIN = 1)
+
+# this could be useful when dropping such countries
+m[!magpply(m, function(y) all(is.na(y)), MARGIN = 1), , ]
+
+# same could be done for the temporal dimension
+magpply(m, function(y) all(is.na(y)), MARGIN = 2)
 ```
 
 ## multiplication of two magpie objects
