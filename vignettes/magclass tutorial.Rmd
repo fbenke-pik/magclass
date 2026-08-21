@@ -479,6 +479,56 @@ m3 <- new.magpie(
 m3[getItems(m1, dim = 1), getItems(m1, dim = 2), getNames(m1)] <- m1
 m3[getItems(m2, dim = 1), getItems(m2, dim = 2), getNames(m2)] <- m2
 m3
+
+# sometimes you just want to fit one magpie object to a reference to
+# make appending possible
+m1 <- new.magpie(
+  cells_and_regions = c("FRA", "DEU"),
+  years = c(1995, 2000, 2005),
+  names = c("chemicals"),
+  sets = c("region", "year", "sector"),
+  fill = sample(6)
+)
+
+m2 <- new.magpie(
+  cells_and_regions = c("FRA", "DEU"),
+  years = c(2000, 2005, 2010),
+  names = c("steel", "cement"),
+  sets = c("region", "year", "sector"),
+  fill = sample(12)
+)
+
+# this matches the years of m1 to the years of m2, i.e. 1995 is dropped and
+# 2005 is added with NAs. afterwards, the two magpie object can be merged into one
+m1 <- matchDim(x = m1, ref = m2, dim = 2, fill = NA)
+mbind(m1, m2)
+
+# matchDim can also be used to make one magpie object match another one
+# so you can do element-wise mutliplication
+
+m1 <- new.magpie(
+  cells_and_regions = c("FRA", "DEU"),
+  years = c(1995, 2000, 2005, 2010),
+  names = c("steel"),
+  sets = c("region", "year", "sector"),
+  fill = sample(6)
+)
+
+factor <- new.magpie(
+  cells_and_regions = c("FRA", "DEU"),
+  years = c(2000, 2005, 2010, 2015),
+  names = c("steel", "chemicals"),
+  sets = c("region", "year", "sector"),
+  fill = sample(12)
+)
+
+# this makes m1 match factor by removing 1995 from m1, adding 2015 with all 0s and
+# adding the sector 'chemicals' with all 0s
+# as 'dim' is not specified, all dimensions are matched
+# afterwards, an element-wise multiplication becomes possible
+# added with all 0s
+m2 <- matchDim(m1, factor, fill = 0)
+m2 * factor
 ```
 
 ## interpolation
@@ -535,11 +585,9 @@ print(m)
 
 
 ## Common problems when converting to magclass
-- magpply
-- matchdim
+- toolIso2Country
 - toolAggregate
   aggregate regions, simple renamings of dimension names, ...
-- toolIso2Country
 - toolISOhistorical
 - subtleties / problems
   - wrong assignment of region for three letter columns (e.g. model = UBA)
