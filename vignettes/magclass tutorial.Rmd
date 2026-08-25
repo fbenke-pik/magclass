@@ -28,6 +28,7 @@ library(magclass)
 # loading other helpers used in this tutorial
 library(tidyr)
 library(dplyr)
+library(piamutils)
 
 # load example data
 pop <- maxample("pop")
@@ -281,7 +282,7 @@ getNames(a2)
 a3 <- animal
 getItems(a3, dim = "type") <- NULL
 
-# but careful, dropping a dimension with more than one value this way will introduce duplicated
+# but careful, dropping a dimension with more than one value this way will introduce duplicates!
 getItems(a3, dim = "color") <- NULL
 
 # add a new dimension to existing data
@@ -629,10 +630,37 @@ print(m)
 
 
 # Useful madrat tool functions and other helpers
+
 - toolIso2Country
 - toolAggregate: aggregate regions, simple renamings of dimension names, ...
 - toolISOhistorical
 - comparing magclass objects
+
+# comparing magpie objects
+```{r}
+
+m1 <- new.magpie(
+  cells_and_regions = c("FRA", "DEU"),
+  years = c(1995, 2000, 2005),
+  names = c("steel", "cement"),
+  sets = c("region", "year", "sector"),
+  fill = sample(12)
+)
+
+m2 <- m1
+m2["FRA", 2000, ] = m2["FRA", 2000, ] * 0.2
+
+# sometimes you want to compare the differences between two magpie objects, for
+# example to make sure they are still identical after you made some changes
+
+piamutils::compareMagpieObject(m1, m2)
+
+# compareMagpieObject accepts either magpie objects or paths to files containing
+# magpie objects
+
+```
+
+
 
 # Sources
 - [magclass concept: Explaining the general concept behing magclass objects in comparison to arrays and data frames](https://pik-piam.r-universe.dev/magclass/doc/magclass-concept.html)
