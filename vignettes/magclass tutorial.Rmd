@@ -94,16 +94,15 @@ print(m)
 df$model <- "IEA"
 as.magpie(df)
 
+# 'as.magpie' seems to struggle with the conversion when the value column is not the
+# last column of the data frame. even explicit assignment does not work here
+as.magpie(df, spatial = 1, temporal = 2, datacol = 4)
 
-# in order to avoid weird wrong assignments during the conversion to magpie objects,
+
+# in order to avoid wrong assignments during the conversion to magpie objects,
 # always make sure the column order in your data frame is: regional column, temporal column,
-# other columns and last the value column. otherwise, the conversion will most likely go wrong,
-# even if you specify 'datacol', 'spatial' and 'temporal' explicitly
-
-# an example for wrong assignments
-df$model <- NULL
-df <- select(df, c("value", "product", "region", "years"))
-as.magpie(df)
+# other columns and the value column at last.
+as.magpie(df[, c("region", "years", "model", "product", "value")], spatial = 1, temporal = 2, datacol = 5)
 ```
 
 ## reading in from different file formats
@@ -624,21 +623,20 @@ print(m)
 ```
 
 
-## Common problems when converting to magclass
-- subtleties / problems
-  - duplicates in magclass objects
-
-
-# Useful madrat tool functions and other helpers
+# Part 3: Useful tool functions
 
 - toolIso2Country
-- toolAggregate: aggregate regions, simple renamings of dimension names, ...
 - toolISOhistorical
-- comparing magclass objects
+- toolAggregate: aggregate regions, simple renamings of dimension names, ...
 
-# comparing magpie objects
 ```{r}
+```
 
+
+
+
+## comparing magpie objects
+```{r}
 m1 <- new.magpie(
   cells_and_regions = c("FRA", "DEU"),
   years = c(1995, 2000, 2005),
@@ -648,7 +646,7 @@ m1 <- new.magpie(
 )
 
 m2 <- m1
-m2["FRA", 2000, ] = m2["FRA", 2000, ] * 0.2
+m2["FRA", 2000, ] <- m2["FRA", 2000, ] * 0.2
 
 # sometimes you want to compare the differences between two magpie objects, for
 # example to make sure they are still identical after you made some changes
@@ -657,7 +655,6 @@ piamutils::compareMagpieObject(m1, m2)
 
 # compareMagpieObject accepts either magpie objects or paths to files containing
 # magpie objects
-
 ```
 
 
