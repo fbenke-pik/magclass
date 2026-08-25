@@ -29,7 +29,7 @@ library(magclass)
 library(tidyr)
 library(dplyr)
 
-# load sample data used
+# load example data
 pop <- maxample("pop")
 animal <- maxample("animal")
 ```
@@ -85,6 +85,24 @@ print(head(df))
 # columns will form the third dimension with its subdimensions.
 m <- as.magpie(df, spatial = 1, temporal = 2, datacol = 4)
 print(m)
+
+# explicitly assigning dimensions is recommended, because otherwise magclass will
+# guess dimensions. assume, you have a model column with the model name 'IEA'. as
+# it is is a three letter, uppercase model, magclass guesses it is a spatial column
+
+df$model <- "IEA"
+as.magpie(df)
+
+
+# in order to avoid weird wrong assignments during the conversion to magpie objects,
+# always make sure the column order in your data frame is: regional column, temporal column,
+# other columns and last the value column. otherwise, the conversion will most likely go wrong,
+# even if you specify 'datacol', 'spatial' and 'temporal' explicitly
+
+# an example for wrong assignments
+df$model <- NULL
+df <- select(df, c("value", "product", "region", "years"))
+as.magpie(df)
 ```
 
 ## reading in from different file formats
@@ -153,6 +171,8 @@ getYears(pop, as.integer = TRUE)
 mplot(pop)
 
 # investigate a higher dimensional magpie object
+animal <- maxample("animal")
+
 getItems(animal)
 
 # list dimension items per subdimension separately
@@ -205,6 +225,25 @@ animal[, , "bird.red"]
 
 # this can also be achieved by chaining subsets, i.e.
 animal[, , "bird"][, , "red"]
+
+# be careful when using the square bracket filtering method in cases where
+# values are not unique to one dimension
+
+# in this example 'ccs' is a possible value for both the technology and scenario dimension
+
+m <- new.magpie(
+  cells_and_regions = c("World"),
+  years = c(2000, 2005),
+  names = c("ccs.ssp2", "ccu.ssp3", "dac.ccs"),
+  sets = c("region", "year", "technology", "scenario"),
+  fill = sample(6)
+)
+
+# this returns two rows, although you might only expect to get one
+m[, , "ccs"]
+
+# therefore, this filter is more precise
+m[, , list(technology = "ccs")]
 ```
 
 ## manipulating a magpie object
@@ -531,7 +570,7 @@ m2 <- matchDim(m1, factor, fill = 0)
 m2 * factor
 ```
 
-## interpolation
+## time interpolation
 
 ```{r}
 m <- new.magpie(
@@ -585,17 +624,15 @@ print(m)
 
 
 ## Common problems when converting to magclass
-- toolIso2Country
-- toolAggregate
-  aggregate regions, simple renamings of dimension names, ...
-- toolISOhistorical
 - subtleties / problems
-  - wrong assignment of region for three letter columns (e.g. model = UBA)
-  - data frames with odd sorting fail to be converted into right magclass structure
-  - filtering for items that appear in more than one subdimension might lead to unexpected results
+  - duplicates in magclass objects
+
+
+# Useful madrat tool functions and other helpers
+- toolIso2Country
+- toolAggregate: aggregate regions, simple renamings of dimension names, ...
+- toolISOhistorical
 - comparing magclass objects
-
-
 
 # Sources
 - [magclass concept: Explaining the general concept behing magclass objects in comparison to arrays and data frames](https://pik-piam.r-universe.dev/magclass/doc/magclass-concept.html)
