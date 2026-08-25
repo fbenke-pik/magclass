@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
 ```{r message=FALSE}
 # load the library
 library(magclass)
+library(madrat)
 
 # loading other helpers used in this tutorial
 library(tidyr)
@@ -625,14 +626,76 @@ print(m)
 
 # Part 3: Useful tool functions
 
-- toolIso2Country
-- toolISOhistorical
-- toolAggregate: aggregate regions, simple renamings of dimension names, ...
+## managing ISO countries
 
-```{r}
+```{r eval=FALSE} 
+
+# retrieve a list of all 249 ISO countries with their full names and 3-letter codes
+madrat::getISOlist()
+
+# add all the missing ISO countries to a magpie object
+m <- new.magpie(
+  cells_and_regions = c("USA", "BRA"),
+  years = c(1995),
+  names = c("cement"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(2)
+)
+
+# new values are set to NA, warnings are not printed
+madrat::toolCountryFill(m, fill = NA, verbosity = 2)
+
+# regions that are not ISO countries are dropped, throwing a warning
+# 'Data for following unknown country codes removed: EUR' 
+
+m <- new.magpie(
+  cells_and_regions = c("USA", "EUR"),
+  years = c(1995),
+  names = c("cement"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(2)
+)
+
+# you can list regions that you intentionally want to drop to omit that warning
+madrat::toolCountryFill(m, fill = NA, verbosity = 2, no_remove_warning = c("EUR"))
+
+# convert the country names in the spatial region to ISO-3 country codes
+
+m <- new.magpie(
+  cells_and_regions = c("United States of America", "England", "Germany"),
+  years = c(1995),
+  names = c("cement"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(4)
+)
+
+# not all names can be mapped automatically and will produce NA
+# 'Following country names could not be found in the country list and returned as NA: "England"'
+toolCountry2isocode(getItems(m, dim = 1))
+
+# turn off the warning for England
+toolCountry2isocode(getItems(m, dim = 1), ignoreCountries = c("England"))
+
+# .. or add manual mapping entries
+toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
+
+# adjusting the regions most be done explicitly. do not ignore warnings produced in this step
+getItems(m, dim = 1) <- toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
+
+# TODO: continue with toolISOhistorical
+m <- new.magpie(
+  cells_and_regions = c("YUG", "SRB", "MNE", "SVN", "HRV", "MKD", "BIH"),
+  years = seq(1980,2005,1),
+  names = c("cement"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(175)
+)
+
+
 ```
 
-
+## (dis)aggregating dimensions
+- toolAggregate: aggregate regions, simple renamings of dimension names, ...
 
 
 ## comparing magpie objects
@@ -656,7 +719,6 @@ piamutils::compareMagpieObject(m1, m2)
 # compareMagpieObject accepts either magpie objects or paths to files containing
 # magpie objects
 ```
-
 
 
 # Sources
