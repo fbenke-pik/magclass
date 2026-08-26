@@ -245,6 +245,18 @@ m[, , "ccs"]
 
 # therefore, this filter is more precise
 m[, , list(technology = "ccs")]
+
+# you can sort magpie objects (spatial and temporal dimension)
+m <- new.magpie(
+  cells_and_regions = c("NZL", "CAN", "AUS"),
+  years = c(2005, 1993, 2000),
+  names = c("ssp1", "ssp2", "ssp3"),
+  fill = sample(27)
+)
+
+print(m)
+
+magpiesort(m)
 ```
 
 ## manipulating a magpie object
@@ -258,6 +270,15 @@ pop1[, , "A2"] <- 0
 # overwrite the first region "AFR" with "GHA"
 getItems(pop1, dim = 1)[1] <- "GHA"
 head(pop1)
+
+# replace elements element-wise
+a1 <- animal
+getItems(a1, dim = "color") <- c("green", "yellow", "purple", "orange")
+getItems(a1)
+
+# add a dimension
+getItems(a1, maindim = 3, dim = "newcolor") <- paste0("color", 1:5)
+getItems(a1, dim = 3)
 
 # rename the temporal dimension from "t" to "year" and spatial dimension from "i" to "region"
 getSets(pop1)[[2]] <- "year"
@@ -401,8 +422,13 @@ m[!magpply(m, function(y) all(is.na(y)), MARGIN = 1), , ]
 magpply(m, function(y) all(is.na(y)), MARGIN = 2)
 ```
 
-## multiplication of two magpie objects
+## object expansion
 ```{r}
+
+# this section explores object expansion, the concept of auto expanding
+# magpie objects when used in calculation with other magclass objects using
+# the example of multiplication. 
+
 m <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
   years = c(1995, 2000, 2005),
@@ -802,5 +828,4 @@ piamutils::compareMagpieObject(m1, m2)
 - [magclass main tutorial: Central tutorial explaining the basics how to use magclass](https://pik-piam.r-universe.dev/magclass/doc/magclass.html)
 - [magclass 6: Tutorial about some important changes which came with the complete rewrite of the package in version 6.](https://pik-piam.r-universe.dev/magclass/doc/magclass6.html)
 - [magclass object expansion: more specific tutorial going into the details of object expansion and set matching.](https://pik-piam.r-universe.dev/magclass/doc/magclass-expansion.html)
-- [The magclass tutorial](https://magpiemodel.github.io/tutorials/t13-magclass)
-- [magclass session as part of the REMIND-MAgPIE workshop](https://pik-potsdam.zoom-x.de/rec/share/HXDw1zHT0Vi-uQroAd7GTr1CBbpgng0C8uESaDCcnhfU2RCZHb_do4_qGnBlvXfs.ubV6oTJ__6CioLkt): use code `Ya&1Yi*v`
+- [The magclass tutorial on github.io](https://magpiemodel.github.io/tutorials/t13-magclass)
