@@ -629,7 +629,6 @@ print(m)
 ## managing ISO countries
 
 ```{r eval=FALSE} 
-
 # retrieve a list of all 249 ISO countries with their full names and 3-letter codes
 madrat::getISOlist()
 
@@ -646,7 +645,7 @@ m <- new.magpie(
 madrat::toolCountryFill(m, fill = NA, verbosity = 2)
 
 # regions that are not ISO countries are dropped, throwing a warning
-# 'Data for following unknown country codes removed: EUR' 
+# 'Data for following unknown country codes removed: EUR'
 
 m <- new.magpie(
   cells_and_regions = c("USA", "EUR"),
@@ -681,11 +680,66 @@ toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
 
 # adjusting the regions most be done explicitly. do not ignore warnings produced in this step
 getItems(m, dim = 1) <- toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
-
 ```
 
 ## (dis)aggregating dimensions
-- toolAggregate: aggregate regions, simple renamings of dimension names, ...
+
+```{r}
+# for renaming the values of a single dimension, you can use 'toolAggregate'
+
+m <- new.magpie(
+  cells_and_regions = c("FRA", "USA"),
+  years = c(2000, 2005, 2010),
+  names = c("steel.automobile", "cement.B&C", "chemicals.agriculture", "chemicals.other"),
+  sets = c("region", "year", "product.sector"),
+  fill = sample(24)
+)
+
+print(m)
+
+# in this example, we want to rename the sector names
+sectormap <- data.frame(
+  from = c("automobile", "B&C", "agriculture", "other"),
+  to = c("transport", "buildings", "other", "other")
+)
+
+# note that 'agriculture'  and ' other' map to other, so values are added up
+toolAggregate(x = m, rel = sectormap, dim = 3.2)
+
+# 'toolaggregate' is also used to aggregate and disaggregate regions
+# aggregation of regions works as in the example before 
+# the following example shows how disaggregation works
+
+m <- new.magpie(
+  cells_and_regions = c("CAZ", "USA", "IND"),
+  years = c(2000, 2005, 2010),
+  names = c("co2"),
+  sets = c("region", "year", "emissions"),
+  fill = sample(9)
+)
+
+print(m)
+
+# normally, such a regionmapping would be retrieved using a call like this
+# toolGetMapping("regionmappingH12.csv"), assuming madrat is set up correctly
+
+regionmapping <- data.frame(
+  RegionCode = c("CAZ", "CAZ", "CAZ", "USA", "IND"),
+  CountryCode = c("CAN", "NZL", "AUS", "USA", "IND")
+)
+
+# the disaggregation needs a weight as magpie object according to which
+# the values in CAZ should be split into CAN, NZL, AUS. 
+# here we use a 50%/20%/30% ratio
+# note that weights do not have to be normalized
+w <- data.frame(
+  to = c("CAN", "NZL", "AUS", "USA", "IND"),
+  weight = c(0.5, 0.2, 0.3, 1, 1)
+) |> as.magpie()
+
+toolAggregate(x = m, rel = regionmapping, dim = 1, from = "RegionCode", to = "CountryCode", weight = w)
+
+```
 
 
 ## disaggregating historic regions
@@ -693,19 +747,19 @@ getItems(m, dim = 1) <- toolCountry2isocode(getItems(m, dim = 1), mapping = c("E
 ```{r message=FALSE}
 # this is a special case of disaggregation country where a historic regions (e.g. Former Soviet Union or Yugoslavia) has values until a specific year, then ceases to exist and the values are reported for the individual countries that followed
 
-# if you need to disaggregate the values for the historic country to the current countries, 'toolISOhistorical' can help 
+# if you need to disaggregate the values for the historic country to the current countries, 'toolISOhistorical' can help
 
 # the magpie object has data for Yugoslavia until 1989, after that the data
 # is reported for the former Yugoslavian countries individually
 m <- new.magpie(
   cells_and_regions = c("YUG", "SRB", "MNE", "SVN", "HRV", "MKD", "BIH"),
-  years = seq(1985,1995,1),
+  years = seq(1985, 1995, 1),
   names = c("steel"),
   sets = c("region", "year", "emissions"),
   fill = NA
 )
 m["YUG", seq(1985, 1989, 1), ] <- sample(5)
-m[c("SRB", "MNE", "SVN", "HRV", "MKD", "BIH"), seq(1990,1995,1),] <- sample(36)
+m[c("SRB", "MNE", "SVN", "HRV", "MKD", "BIH"), seq(1990, 1995, 1), ] <- sample(36)
 
 print(m)
 
@@ -718,8 +772,6 @@ histMap <- data.frame(
 # this call disaggregates YUG values until 1989 and removes YUG, using
 # the values in 1990 as a weight
 madrat::toolISOhistorical(m, mapping = histMap)
-
-
 ```
 
 ## comparing magpie objects
