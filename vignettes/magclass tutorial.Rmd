@@ -682,21 +682,45 @@ toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
 # adjusting the regions most be done explicitly. do not ignore warnings produced in this step
 getItems(m, dim = 1) <- toolCountry2isocode(getItems(m, dim = 1), mapping = c("England" = "GBR"))
 
-# TODO: continue with toolISOhistorical
-m <- new.magpie(
-  cells_and_regions = c("YUG", "SRB", "MNE", "SVN", "HRV", "MKD", "BIH"),
-  years = seq(1980,2005,1),
-  names = c("cement"),
-  sets = c("region", "year", "emissions"),
-  fill = sample(175)
-)
-
-
 ```
 
 ## (dis)aggregating dimensions
 - toolAggregate: aggregate regions, simple renamings of dimension names, ...
 
+
+## disaggregating historic regions
+
+```{r message=FALSE}
+# this is a special case of disaggregation country where a historic regions (e.g. Former Soviet Union or Yugoslavia) has values until a specific year, then ceases to exist and the values are reported for the individual countries that followed
+
+# if you need to disaggregate the values for the historic country to the current countries, 'toolISOhistorical' can help 
+
+# the magpie object has data for Yugoslavia until 1989, after that the data
+# is reported for the former Yugoslavian countries individually
+m <- new.magpie(
+  cells_and_regions = c("YUG", "SRB", "MNE", "SVN", "HRV", "MKD", "BIH"),
+  years = seq(1985,1995,1),
+  names = c("steel"),
+  sets = c("region", "year", "emissions"),
+  fill = NA
+)
+m["YUG", seq(1985, 1989, 1), ] <- sample(5)
+m[c("SRB", "MNE", "SVN", "HRV", "MKD", "BIH"), seq(1990,1995,1),] <- sample(36)
+
+print(m)
+
+histMap <- data.frame(
+  fromISO = "YUG",
+  toISO = c("SRB", "MNE", "SVN", "HRV", "MKD", "BIH"),
+  lastYear = "y1989"
+)
+
+# this call disaggregates YUG values until 1989 and removes YUG, using
+# the values in 1990 as a weight
+madrat::toolISOhistorical(m, mapping = histMap)
+
+
+```
 
 ## comparing magpie objects
 ```{r}
