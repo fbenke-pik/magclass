@@ -399,9 +399,11 @@ a1 <- collapseDim(a1)
 ## summing over dimensions
 
 ```{r}
-# get the global population
-dimSums(pop, dim = 1)
 
+# The 'dimSums' function helps with summation over various regions.
+
+# get the global population (assuming the regions all sum up to global)
+dimSums(pop, dim = 1)
 
 # a sample with made-up emissions in various industry sectors
 m <- new.magpie(
@@ -412,25 +414,29 @@ m <- new.magpie(
   fill = sample(16)
 )
 
+print(m)
+
 # get emissions over all sectors
 dimSums(m, dim = 3)
 
 # get emissions over all sectors and all years
 dimSums(m, dim = c(2, 3))
 
-# you can also sum over subdimensions
-animals <- maxample("animal")
-# sum over colors in animals object
-head(dimSums(animals, dim = 3.3))
+# You can also sum over subdimensions.
 
-# be careful when a magpie object contains NAs
+# sum over colors in animals object
+head(dimSums(animal, dim = 3.3))
+
+# Be careful when a magpie object contains NAs.
+
+# set USA, 2000, cement emissions to NA
 m["USA", 2000, "cement"] <- NA
-# summing over sectors yields NA for USA in 2000, because cement has no value
-# for that year
+
+# Summing over sectors yields NA for USA in 2000, because cement has no value for that year.
 dimSums(m, dim = 3)
 
-# this behaviour makes sense, as we cannot assume that data gaps can be interpreted
-# as 0 values. if you still want to, you can set na.rm = TRUE
+# This makes sense, as we cannot assume that data gaps can be interpreted
+# as 0 values. If you still want to, you can set na.rm = TRUE.
 dimSums(m, dim = 3, na.rm = TRUE)
 ```
 
@@ -447,23 +453,22 @@ m <- new.magpie(
 
 print(m)
 
-# efficient looping over magpie can be done using 'magpply'
-# this call loops over the spatial dimension and identifies rows with all NAs
+# Efficient looping over magpie objects can be done using 'magpply'.
+# This call loops over the spatial dimension and identifies rows with all NAs.
 magpply(m, function(y) all(is.na(y)), MARGIN = 1)
 
-# this could be useful when dropping such countries
+# This could be useful when dropping such countries.
 m[!magpply(m, function(y) all(is.na(y)), MARGIN = 1), , ]
 
-# same could be done for the temporal dimension
+# Same could be done for the temporal dimension
 magpply(m, function(y) all(is.na(y)), MARGIN = 2)
 ```
 
 ## object expansion
 ```{r}
 
-# this section explores object expansion, the concept of auto expanding
-# magpie objects when used in calculation with other magclass objects using
-# the example of multiplication. 
+# This section explores object expansion, the concept of auto expanding
+# magpie objects when used in calculations with other magpie objects.
 
 m <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
@@ -475,25 +480,26 @@ m <- new.magpie(
 
 print(m)
 
-# simple case: all dimension values in 'factor' either perfectly match pop1 (year), or
-# they have exactly one value (region, product)
+# Simple case: all dimension values in 'factor' either perfectly match pop1 (year), or
+# they have exactly one value (region, product).
 factor <- new.magpie(years = getItems(m, 2), fill = c(1.5, 2, 4))
 
 print(factor)
 
-# if you do this calculation, the factors will be multiplied with the matching years
-# the same factors are applied for each region and scenario
+# If you do this calculation, the factors will be multiplied with the matching years.
+# The same factors are applied for each region and scenario
 m * factor
 
-# behind the scenes, factor is expanded to match m to then do an element-wise multiplication
+# Behind the scenes, the 'factor' object is expanded to match 'm' to then do an element-wise multiplication.
 magpie_expand(factor, m)
 
-# what happens if the 'factor' object does not have matching years?
-# magpie assumes the years in both objects are of different sets and creates the cross product between all years in both sets. therefore, the object is blown up in size
+# What happens if the 'factor' object does not have matching years?
+# magpie assumes the years in both objects are of different sets and creates the 
+# cross product between all years in both sets. Therefore, the object is blown up in size.
 m * factor[, c(1995, 2005), ]
 
-# if you do calculations with two magpie objects with exact same dimensions, the data
-# will be applied element-wise
+# If you do calculations with two magpie objects with exact same dimensions, the data
+# will be applied element-wise.
 
 factor <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
@@ -509,7 +515,7 @@ m * factor
 
 ## merging two magpie objects
 
-```{r}
+```{r error=TRUE}
 m1 <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
   years = c(1995, 2000, 2005),
@@ -526,12 +532,12 @@ m2 <- new.magpie(
   fill = sample(4)
 )
 
-# appending one magpie object to another one is done using 'mbind'
+# Appending one magpie object to another one is done using 'mbind'.
 
 mbind(m1, m2)
 
-# however, binding two objects is not straightforward when the dimensions do not match
-# the following will crash, because both temporal and spatial dimension differ
+# However, binding two objects is not straightforward when the dimensions do not match.
+# Binding 'm1' to 'm3' will crash, because both temporal and spatial dimension differ.
 
 m3 <- new.magpie(
   cells_and_regions = c("DEU", "FRA"),
@@ -541,19 +547,22 @@ m3 <- new.magpie(
   fill = sample(4)
 )
 
-# this will crash
-# mbind(m1, m3)
+# This will crash
+mbind(m1, m3)
+```
 
-# one way of fixing this is adding missing dimension values before binding, but this can
-# be cumbersome for larger differences
+```{r}
+
+# One way of fixing this is adding missing dimension values before binding, but this can
+# be cumbersome for larger differences.
 m1 <- add_columns(m1, addnm = c("DEU", "FRA"), dim = 1, fill = NA)
 m3 <- add_columns(m3, addnm = c("y1995"), dim = 2, fill = NA)
 m3 <- add_columns(m3, addnm = c("USA", "BRA"), dim = 1, fill = NA)
 
 mbind(m1, m3)
 
-# in some cases, the best way to deal with this is defining a new magpie object
-# that has all the dimension values and copy over values
+# In some cases, the best way to deal with this is defining a new magpie object
+# that has all the dimension values of the objects you want to merge and copy over values.
 
 m1 <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
@@ -571,6 +580,7 @@ m2 <- new.magpie(
   fill = sample(4)
 )
 
+# create a new magpie object that has all the dimension values of 'm1' and 'm2'
 m3 <- new.magpie(
   cells_and_regions = union(getItems(m1, dim = 1), getItems(m2, dim = 1)),
   years = union(getItems(m1, dim = 2), getItems(m2, dim = 2)),
@@ -578,12 +588,12 @@ m3 <- new.magpie(
   fill = NA
 )
 
+# copy 'm1' and 'm2' contents into 'm3'
 m3[getItems(m1, dim = 1), getItems(m1, dim = 2), getNames(m1)] <- m1
 m3[getItems(m2, dim = 1), getItems(m2, dim = 2), getNames(m2)] <- m2
 m3
 
-# sometimes you just want to fit one magpie object to a reference to
-# make appending possible
+# Sometimes you just want to fit one magpie object to a reference to make appending possible.
 m1 <- new.magpie(
   cells_and_regions = c("FRA", "DEU"),
   years = c(1995, 2000, 2005),
@@ -600,13 +610,14 @@ m2 <- new.magpie(
   fill = sample(12)
 )
 
-# this matches the years of m1 to the years of m2, i.e. 1995 is dropped and
-# 2005 is added with NAs. afterwards, the two magpie object can be merged into one
+# 'matchDim'  matches the years of 'm1'  to the years of 'm2', i.e. 1995 is dropped and
+# 2005 is added with NAs. Afterwards, the two magpie object can be merged into one
 m1 <- matchDim(x = m1, ref = m2, dim = 2, fill = NA)
+print(m1)
 mbind(m1, m2)
 
-# matchDim can also be used to make one magpie object match another one
-# so you can do element-wise mutliplication
+# 'matchDim' can also be used to make one magpie object match another one
+# so you can do element-wise multiplication.
 
 m1 <- new.magpie(
   cells_and_regions = c("FRA", "DEU"),
@@ -624,11 +635,9 @@ factor <- new.magpie(
   fill = sample(12)
 )
 
-# this makes m1 match factor by removing 1995 from m1, adding 2015 with all 0s and
-# adding the sector 'chemicals' with all 0s
-# as 'dim' is not specified, all dimensions are matched
-# afterwards, an element-wise multiplication becomes possible
-# added with all 0s
+# This makes 'm1' match factor by removing 1995 from 'm1', adding 2015 with all 0s and
+# adding the sector 'chemicals' with all 0s. As 'dim' is not specified, all dimensions are matched.
+# Afterwards, element-wise multiplication becomes possible.
 m2 <- matchDim(m1, factor, fill = 0)
 m2 * factor
 ```
@@ -646,16 +655,16 @@ m <- new.magpie(
 
 print(m)
 
-# you can fill missing time steps by linear interpolation, e.g. add a 2000 timestep
+# You can fill missing time steps by linear interpolation, e.g. add a 2000 time step.
 time_interpolate(m, interpolated_year = seq(1995, 2005, 5))
 
-# you can also extrapolate timesteps before or after the time steps
+# You can also extrapolate time steps before or after the time steps.
 time_interpolate(m, interpolated_year = seq(1990, 2010, 5), extrapolation_type = "linear")
 
-# you can specify that extrapolated time steps just repeat the earliest / latest value
+# You can specify that extrapolated time steps just repeat the earliest / latest value.
 time_interpolate(m, interpolated_year = seq(1990, 2010, 5), extrapolation_type = "constant")
 
-# the current extrapolation method has limitations, though ..
+# The magclass interpolation method has limitations, though ..
 
 m <- new.magpie(
   cells_and_regions = c("USA", "BRA"),
@@ -665,16 +674,15 @@ m <- new.magpie(
   fill = c(72, 81, NA, 99, 102, NA, 80, NA, 90, 12, NA, 33)
 )
 
-# take this magpie object
 print(m)
 
-# interpolation won't fill the NA gaps, because interpolated steps are inferred by missing
-# values in the temporal dimension (i.e y2000 has to be missing to create an interpolated step)
-# however, this object has NAs for some of the existing time steps for some regions and sectors
+# Interpolation won't fill the NA gaps, because interpolated steps are inferred by missing
+# values in the temporal dimension (i.e "y2000" has to be missing to create an interpolated step).
+# However, the example object has NAs for some of the existing time steps for some regions and sectors.
 time_interpolate(m, interpolated_year = seq(1995, 2005, 5))
 
-# for this to work, you'd have to do row-wise interpolation, dropping NAs from the rows
-# this is admittedly a bit cumbersome
+# To fille the NAs with interpolated values, you have to do row-wise interpolation, dropping NAs from the rows.
+# This is admittedly a bit cumbersome.
 for (reg in getItems(m, 1)) {
   for (sec in getItems(m, 3)) {
     dropYears <- magpply(m[reg, , sec], function(y) all(is.na(y)), MARGIN = 2)
